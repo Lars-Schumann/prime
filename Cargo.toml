@@ -1,0 +1,15 @@
+[package]
+name = "prime"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+
+[build-dependencies]
+primal = "0.3.3"
+
+[profile.dev.build-override]
+opt-level = 3
+
+[dev-dependencies]
+primal = "0.3.3"
