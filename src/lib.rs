@@ -10,17 +10,18 @@ pub const PRIME_COUNT: usize = 203_280_221;
 
 const SHIFT: u32 = 8;
 const PI_LEN: usize = (1 << (32 - SHIFT)) + 1;
+const BITSET_LEN: usize = 1 << (32 - 3);
 
 /// Every prime `<= u32::MAX` sorted in ascending order.
-// SAFETY: `build.rs` writes exactly `PRIME_COUNT` `u32`s in target endianness (a size mismatch
-// fails to compile), and every bit pattern is a valid `u32`.
 pub static PRIMES: [u32; PRIME_COUNT] =
     unsafe { transmute(*include_bytes!(concat!(env!("OUT_DIR"), "/primes.bin"))) };
 
 // `PI[k]` = number of primes `< k << SHIFT`.
-// SAFETY: same as `PRIMES`, with `PI_LEN` `u32`s.
 static PI: [u32; PI_LEN] =
     unsafe { transmute(*include_bytes!(concat!(env!("OUT_DIR"), "/pi.bin"))) };
+
+/// Primality bitset over all `u32`s: bit `n % 8` of byte `n / 8` is set iff `n` is prime.
+static PRIME_BITS: [u8; BITSET_LEN] = *include_bytes!(concat!(env!("OUT_DIR"), "/bitset.bin"));
 
 pub fn prime_index(num: u32) -> Option<usize> {
     PRIMES.binary_search(&num).ok()
@@ -39,6 +40,10 @@ pub fn is_prime(num: u32) -> bool {
 
 pub fn is_prime_smort(num: u32) -> bool {
     prime_index_smort(num).is_some()
+}
+
+pub fn is_prime_bitset(num: u32) -> bool {
+    (PRIME_BITS[(num >> 3) as usize] >> (num & 7)) & 1 != 0
 }
 
 #[cfg(test)]
@@ -69,6 +74,13 @@ mod tests {
     }
 
     #[test]
+    fn bitset_exact() {
+        assert!(PRIMES.iter().all(|&p| is_prime_bitset(p)));
+        let ones: usize = PRIME_BITS.iter().map(|b| b.count_ones() as usize).sum();
+        assert_eq!(ones, PRIME_COUNT);
+    }
+
+    #[test]
     fn interpolation_matches_binary() {
         let mut state = 0x1234_5678_u64;
         let random = (0..1_000_000).map(|_| {
@@ -80,6 +92,7 @@ mod tests {
         let edges = (0..=10_000).chain(u32::MAX - 10_000..=u32::MAX);
         for n in edges.chain(random).chain(PRIMES.iter().copied()) {
             assert_eq!(is_prime_smort(n), is_prime(n), "{n}");
+            assert_eq!(is_prime_bitset(n), is_prime(n), "{n}");
         }
     }
 }

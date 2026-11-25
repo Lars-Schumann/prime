@@ -1,7 +1,7 @@
 use core::hint::black_box;
 
 use criterion::{Criterion, Throughput, criterion_group, criterion_main};
-use prime::{is_prime, is_prime_smort};
+use prime::{is_prime, is_prime_bitset, is_prime_smort};
 
 fn splitmix64(state: &mut u64) -> u64 {
     *state = state.wrapping_add(0x9E37_79B9_7F4A_7C15);
@@ -44,5 +44,14 @@ fn bench_is_prime_smort(c: &mut Criterion) {
     bench_with(c, "is_prime_interpolation", is_prime_smort);
 }
 
-criterion_group!(benches, bench_is_prime, bench_is_prime_smort);
+fn bench_is_prime_bitset(c: &mut Criterion) {
+    bench_with(c, "is_prime_bitset", is_prime_bitset);
+}
+
+criterion_group!(
+    benches,
+    bench_is_prime,
+    bench_is_prime_smort,
+    bench_is_prime_bitset
+);
 criterion_main!(benches);
